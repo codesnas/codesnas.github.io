@@ -154,6 +154,10 @@
   "gui:skirmishgame": "遭遇戰",
   "gui:specialmission": "特別任務",
   "stt:modespecialmission": "帶 specialmission 標誌的單圖任務",
+  "gui:race": "賽車",
+  "stt:moderace": "選擇國家即選擇固定載具。自由選路，依次通過全部游標計一圈，率先完成規定圈數獲勝；加速、煞車、甩尾，拾取道具並釋放技能。",
+  "gui:racemapcrimsoncircuit": "赤色環道",
+  "gui:racemapharborrun": "港灣衝線",
   "gui:aidummy": "AI-弱智",
   "gui:aieasybeta": "AI-简单",
   "gui:aisealand": "AI-简单海陆",
@@ -418,5 +422,7 @@
   "gui:campaignresourcedownloading": "正在下載戰役資源...",
   "gui:campaignresourcecancel": "取消",
   "gui:campaignresourceerror": "戰役資源載入失敗，請檢查網路後重試。",
-  "gui:campaignresourceretry": "重試"
+  "gui:campaignresourceretry": "重試",
+  "gui:racemaparctic": "北極圈 · 自由競速",
+  "gui:racemaplongmarch": "長征 · 自由競速"
 }

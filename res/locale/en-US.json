@@ -126,6 +126,10 @@
   "gui:skirmishgame": "Skirmish",
   "gui:specialmission": "Special Mission",
   "stt:modespecialmission": "Single-map missions marked specialmission",
+  "gui:race": "Race",
+  "stt:moderace": "Choose a country to choose its fixed vehicle. Pick any driveable route. Pass every checkpoint in order each lap and complete the required laps first. Accelerate, brake, drift, collect items and use your skill.",
+  "gui:racemapcrimsoncircuit": "Crimson Circuit",
+  "gui:racemapharborrun": "Harbor Run",
   "gui:aidummy": "Training Dummy",
   "gui:aieasybeta": "Easy Enemy (BETA)",
   "gui:aisealand": "Sea/Land Enemy",
@@ -411,5 +415,7 @@
   "gui:campaignresourcedownloading": "Downloading campaign resources...",
   "gui:campaignresourcecancel": "Cancel",
   "gui:campaignresourceerror": "Campaign resources could not be loaded. Check your connection and try again.",
-  "gui:campaignresourceretry": "Retry"
+  "gui:campaignresourceretry": "Retry",
+  "gui:racemaparctic": "Arctic Circle · Rally",
+  "gui:racemaplongmarch": "A Path Beyond II · Rally"
 }

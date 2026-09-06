@@ -154,6 +154,10 @@
   "gui:skirmishgame": "遭遇战",
   "gui:specialmission": "特别任务",
   "stt:modespecialmission": "带 specialmission 标志的单图任务",
+  "gui:race": "赛车",
+  "stt:moderace": "选择国家即选择固定载具。自由选路，依次通过全部游标计一圈，率先完成规定圈数获胜；加速、刹车、漂移，拾取道具并释放技能。",
+  "gui:racemapcrimsoncircuit": "赤色环道",
+  "gui:racemapharborrun": "港湾冲线",
   "gui:quickmatch": "排位赛",
   "gui:custommatch": "联机大厅",
   "Name:Confederation": "中国",
@@ -450,5 +454,7 @@
   "gui:campaignresourcedownloading": "正在下载战役资源...",
   "gui:campaignresourcecancel": "取消",
   "gui:campaignresourceerror": "战役资源加载失败，请检查网络后重试。",
-  "gui:campaignresourceretry": "重试"
+  "gui:campaignresourceretry": "重试",
+  "gui:racemaparctic": "北极圈 · 自由竞速",
+  "gui:racemaplongmarch": "长征 · 自由竞速"
 }

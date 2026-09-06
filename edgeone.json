@@ -35,6 +35,10 @@
     {
       "source": "/js/*",
       "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    },
+    {
+      "source": "/res/race/*",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
     }
   ]
 }
