@@ -27,6 +27,11 @@ For commercial authorization, please contact the copyright holder first to obtai
 对局开始后，在浏览器开发者工具控制台使用 `window.werhd` 读取本地视野，并下发与鼠标相同的锁步指令。
 
 完整 API、返回值、枚举和示例见 [docs/player-console-api.md](docs/player-console-api.md)。
+玩家自己写的脚本在游戏页里直接调用 `window.werhd`；参考循环见 [docs/examples/werhd-user-script.mjs](docs/examples/werhd-user-script.mjs)。
+
+可直接下载 [TypeScript 声明](werhd-player-api.d.ts)。API 支持精确物体/地格/桥面目标、部署姿态、载员/驻军状态及本地摄像机移动；已消失的单位查询返回 `undefined`。
+
+[Jev 本地接入](docs/jev-player-local.md) · [阶段验收与待办](docs/jev-player-goal-audit.md)。当前为阶段交付，跨地图固定策略胜利及全部特殊行动的实战验证仍有待办。
 
 ```js
 werhd.help()

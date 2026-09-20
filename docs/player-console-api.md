@@ -21,6 +21,42 @@ werhd.help()
 
 指令进入人类 `ActionQueue`，联机与回放和点鼠标同一条路径。不要用它们去改模拟或揭迷雾。
 
+## 玩家脚本怎么和 API 交互
+
+对局开始后，游戏页上已经有 `window.werhd`。你自己写的 JS 跑在**同一页**里，直接函数调用。没有插件通道，也没有 CEF 桥。Jev 或其它模型不能自己碰 `werhd`：它们只是你的脚本可以去问的决策接口。
+
+```
+你的脚本  --werhd.units()/deploy()-->  window.werhd
+你的脚本  --可选 evaluate-->  Jev
+```
+
+把脚本送进游戏页的方式：
+
+1. **控制台粘贴**（最贴近会编程的玩家）：进局后先执行 `werhd.help()`，再贴下面的循环或 `import`。
+2. **本机模块**：把 [examples/werhd-user-script.mjs](examples/werhd-user-script.mjs) 拷到自己的静态目录，控制台 `import('http://127.0.0.1:5500/werhd-user-script.mjs')`。开发服也可以：
+
+```js
+const { attachWerhdPlayer } = await import('/docs/examples/werhd-user-script.mjs')
+attachWerhdPlayer(werhd)
+```
+
+3. **油猴**：只是自动完成第 1 步，仍然是页内 `werhd.xxx()`。
+
+`onTick` 单次大约 8ms。问 Jev（网络）必须在回调外异步做，下一拍再 `werhd.move/attack`。在 `onTick` 里 `await` 模型会把回调掐掉。
+
+完整示例（写死规则，也可换成你的 `askJev`）见 [examples/werhd-user-script.mjs](examples/werhd-user-script.mjs)。控制台最小闭环：
+
+```js
+werhd.onTick(() => {
+  const mcv = werhd.units('self').find((unit) => ['AMCV', 'SMCV', 'CMCV'].includes(unit.name))
+  if (mcv) werhd.deploy([mcv.id])
+  const idle = werhd.units('self').filter((unit) => unit.isIdle && unit.name === 'E1')
+  const enemy = werhd.units('enemy')[0]
+  if (!mcv && idle.length === 0) werhd.produce('E1')
+  if (idle.length && enemy) werhd.attack(idle.map((unit) => unit.id), enemy.id)
+})
+```
+
 ## 开局示例：选中基地车并展开
 
 ```js
@@ -40,10 +76,10 @@ werhd.deploy([mcv.id])
 | `werhd.tick()` | 整数 | 当前模拟拍 |
 | `werhd.time()` | 秒 | 当前对局时间 |
 | `werhd.units(relation?)` | 单位数组 | 默认 `'self'`。见下方关系 |
-| `werhd.unit(id)` | 单位或 `undefined` | 看不见的 id 当作不存在 |
+| `werhd.unit(id)` | 单位或 `undefined` | 无效、已消失、已摧毁或不可见的 id 均返回 `undefined` |
 | `werhd.selected()` | 单位数组 | 当前选中 |
 | `werhd.crates()` | 箱子数组 | 仅本地可见 |
-| `werhd.map.size()` | `{ width, height }` | 地图尺寸 |
+| `werhd.map.size()` | `{ width, height }` | 地图尺寸副本，修改返回值不会改变地图 |
 | `werhd.map.tile(x, y)` | 格子或 `undefined` | 迷雾中为 `undefined` |
 | `werhd.map.visible(x, y)` | 布尔 | 该格是否可见 |
 | `werhd.canPlace(name, x, y)` | 布尔 | 可见格子上能否放该建筑 |
@@ -63,6 +99,8 @@ werhd.deploy([mcv.id])
 
 看不见、未探开、隐身未侦测的单位，`unit(id)` 返回 `undefined`，不能靠扫 id 透视。
 
+观察和执行之间，目标可能被摧毁或变卖。再次查询该 id 不会抛异常；`weaponVs` 返回 `undefined`，`inRange` 返回 `false`。`order` 过滤已消失的己方单位，物体目标失效或没有剩余可操作单位时返回 `false`；`select` 跳过无效 id。`deploy` 全部失效时返回 `false` 并输出诊断。上述行为不改变正常锁步指令在模拟执行时的合法性检查。
+
 ### 单位对象
 
 ```js
@@ -75,6 +113,8 @@ werhd.deploy([mcv.id])
   worldPosition: { x, y, z },
   onBridge, zone, direction, velocity,
   isIdle, sight, veteranLevel,
+  canDeploy: true,       // 仅己方；能力判断，当前地形仍可能阻止展开
+  isDeployed: false,     // 仅己方可反复展开的单位；基地车等形态转换单位为 undefined
   primaryWeapon: { minRange, maxRange, subjectToElevation, cooldownTicks },
   secondaryWeapon
 }
@@ -135,7 +175,7 @@ if (me && them) console.log(werhd.weaponVs(me.id, them.id))
 | `werhd.attack(ids, targetId)` | 攻击目标 |
 | `werhd.attackMove(ids, x, y)` | 攻击移动 |
 | `werhd.stop(ids)` | 停止 |
-| `werhd.gather(ids, x?, y?)` | 采矿；可省略坐标 |
+| `werhd.gather(ids, x, y)` | 采矿到明确地格；缺失或非法坐标不下令。矿区搜索与选择由用户脚本完成 |
 | `werhd.deploy(ids)` | 展开 / 部署，与 D 键相同 |
 | `werhd.order(ids, type, targetIdOrX?, y?)` | 原始指令 |
 | `werhd.produce(name, qty?)` | 入队生产，默认 1 |
@@ -153,6 +193,8 @@ if (me && them) console.log(werhd.weaponVs(me.id, them.id))
 `order` 的目标：只传一个数字当目标单位 id；传 `x, y` 当地图格。无目标的 `OrderType.Deploy` 会改成 `DeploySelected`。
 
 `produce` / `cancel` 找不到该名字时 `console.warn`，例如 `werhd.produce: E1 is not available`。
+
+`weaponVs(a, b)` / `inRange(a, b)` 保持主武器语义。显式传第三个参数 `"current"` 时，查询引擎按当前姿态和目标实际选择的武器，包含部署和对空限制；无兼容武器时分别返回 `undefined` / `false`。部署是切换操作，脚本应在调用前重新读取 `isDeployed`，避免迟到响应反向切换。
 
 ### `deploy` 失败原因
 
@@ -180,7 +222,7 @@ werhd.onTick(({ tick, time }) => {
 werhd.offTick()
 ```
 
-回调抛错或单次超过约 8ms 会被关掉，并 `console.warn`，避免卡死主线程。新的 `onTick` 会替换旧回调，不是叠加。
+回调抛错或单次超过约 8ms 会被关掉，并 `console.warn`，避免卡死主线程。新的 `onTick` 会替换旧回调，不是叠加。问 Jev 等网络请求不要写在这个回调里同步等待，见上文「玩家脚本怎么和 API 交互」。
 
 ## 枚举
 
@@ -268,10 +310,17 @@ werhd.superweapon(werhd.SuperWeaponType.ChronoSphere, 30, 40)
 巡逻己方空闲矿车：
 
 ```js
-const ore = werhd.units('self').find((unit) => unit.name === 'OREP' || unit.name === 'CMIN')
-werhd.units('self')
-  .filter((unit) => unit.isIdle && (unit.name === 'HARV' || unit.name === 'HORV'))
-  .forEach((unit) => werhd.gather([unit.id], ore?.tile.rx, ore?.tile.ry))
+const { width, height } = werhd.map.size()
+let ore
+for (let x = 0; x < width && !ore; x++) {
+  for (let y = 0; y < height; y++) {
+    const tile = werhd.map.tile(x, y)
+    if (tile?.landType === werhd.LandType.Tiberium) { ore = tile; break }
+  }
+}
+if (ore) werhd.units('self')
+  .filter(u => u.isIdle && werhd.rules(u.name, u.type)?.harvester)
+  .forEach(u => werhd.gather([u.id], ore.rx, ore.ry))
 ```
 
 造兵并放置基地：
@@ -288,3 +337,38 @@ if (werhd.canPlace('GACNST', 20, 22)) werhd.place('GACNST', 20, 22)
 - 不消耗对局 PRNG
 - 调试作弊仍走单机 `r.cheats`
 - 这是给会写脚本的玩家用的本机控制台，不是给外挂改模拟的接口
+
+
+## 精确类型与组合行动
+
+每次 werhd 构建自动生成根目录 `/werhd-player-api.d.ts`，开发服同一路径也可读取。下载该文件即可通过 `import type { PlayerConsolePublicApi } from './werhd-player-api'` 引用；无需安装或重新构建机器人 SDK。声明包含 `Window.werhd`（离局时为 `undefined`）。公开枚举为 `ObjectType`、`OrderType`、`LandType`、`ZoneType`、`VeteranLevel`、`QueueType`、`QueueStatus`、`FactoryType`、`BuildCat`、`ArmorType` 和 `SuperWeaponType`。
+
+`rules(name, type)` 返回当前对局实际解析的单位规则副本，包括地图/MOD 覆盖、价格、工厂类型、容量、驻扎/部署能力、主副武器参数等。没有此类型的规则则返回 `undefined`。只暴露单位规则字段，不导出地图物体列表、出生位置、触发器或整份地图 INI；规则分类、经济计算、候选排序由用户脚本完成。
+
+单位新增状态：`ammo` 为己方飞机剩余弹药；`hasWrenchRepair` 为己方建筑维修开关；`transport` 为己方载具容量、占用槽数和载员 ID；可见建筑的 `garrison` 提供人数、容量和可驻扎状态，具体驻兵 ID 仅对己方提供。所有数组都是副本。`canDeploy` 表示支持 D 键行为，不承诺当前地形合法；`isDeployed` 只适用于可反复切换姿态的己方单位。
+
+统一 `order` 接受按命令种类区分的目标类型，旧的位置参数形式仍可用：
+
+```ts
+api.order(infantryIds, { type: api.OrderType.Occupy, target: { objectId: civilianBuildingId } })
+api.order(infantryIds, { type: api.OrderType.EnterTransport, target: { objectId: transportId } })
+api.order([transportId], { type: api.OrderType.DeploySelected }) // 卸载
+api.order([occupiedBuildingId], { type: api.OrderType.DeploySelected }) // 撤出驻军
+api.order(engineerIds, { type: api.OrderType.Repair, target: { objectId: visibleBridgeHutId } })
+api.order(attackers, { type: api.OrderType.ForceAttack, target: { x, y, onBridge: true } })
+api.order(units, { type: api.OrderType.Move, target: { x, y, onBridge: true } })
+```
+
+`map.tile(x,y)?.bridge` 返回已揭示格上的桥段 ID、高度、低桥标记和生命值。`onBridge: true` 明确指定可见桥面，省略时目标为地面。侦察移动可以指向迷雾，物体目标必须可见。目标检查、己方单位过滤和分批下令只作用于玩家适配层，未修改机器人共用的 `ActionsApi` 或订单执行器。
+
+`order` 的 `true` 仅表示已经加入普通锁步队列，后续仍由正常游戏规则判定和执行。用户脚本需要通过后续状态核验入驻、载员、弹药、部署、桥段等变化，不能把命令提交当成行动完成。
+## 本地摄像机
+
+```js
+werhd.camera.centerAt(60, 45); // 整数地图坐标；仅移动本地视野
+const state = werhd.camera.state(); // { pan: { x, y }, limits?: { x, y, width, height } }
+```
+
+`centerAt` 使用与地图定位相同的等距投影，接受地图范围内的整数坐标，遵守正常摄像机边界；靠近边缘时目标不一定能落在屏幕正中。非法坐标或没有渲染器时返回 `false`，成功交给本地摄像机时返回 `true`。迷雾中位置按基准高度定位，不借镜头偏移泄露隐藏地形高度。
+
+`state` 返回摄像机投影偏移和边界的数据副本，单位是投影屏幕像素，不是地图格坐标；无渲染器时返回 `undefined`。两项方法均不修改单位选择、锁步队列、迷雾或战场状态，观察者也可调用。自动跟随、切换战区、镜头停留时间由用户侧实现。
